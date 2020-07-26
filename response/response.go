@@ -1,4 +1,4 @@
-package anerbot
+package response
 
 import (
 	"bytes"
@@ -68,6 +68,12 @@ type PubSubMessage struct {
 	Data []byte `json:"data"`
 }
 
+// Struct for the message to be received from the GCP Pub/Sub engine.
+type queueMessage struct {
+	Query       string `json:"query"`
+	ResponseUrl string `json:"response_url"`
+}
+
 // init() runs at the beginning of our GCF and sets the variables needed
 // for the response process from the env variables set in the GCF.
 func init() {
@@ -75,6 +81,18 @@ func init() {
 	airtableBaseID = os.Getenv("AIRTABLE_BASE_ID")
 	airtableTableID = os.Getenv("AIRTABLE_TABLE_ID")
 	airtableViewID = os.Getenv("AIRTABLE_VIEW_ID")
+}
+
+// main() does not run in GCF. It is left here strictly for testing
+// responses locally. To compile locally, change package name
+// to "main" and run `go build`.
+func main() {
+	http.HandleFunc("/response", LocalResponse)
+
+	err := http.ListenAndServe(":1234", nil)
+	if err != nil {
+		log.Fatalf("Could not serve http: %v", err)
+	}
 }
 
 // Main entry point for GCF anerbot-response function. When a new message
@@ -161,7 +179,7 @@ func sendFailureMessage(url string) {
 
 // Function utilized strictly for local testing of the response object
 // to be sent back to Slack. In order to use this function, change this
-// package name and the one in queue.go to "main" and run `go build`.
+// package name to "main" and run `go build`.
 func LocalResponse(w http.ResponseWriter, r *http.Request) {
 	// Grab the raw body in bytes from the original request and
 	// create a readable buffer for other functions to use.

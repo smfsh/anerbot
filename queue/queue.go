@@ -1,4 +1,4 @@
-package anerbot
+package queue
 
 import (
 	"bytes"
@@ -65,7 +65,6 @@ func init() {
 // responses locally. To compile locally, change package name
 // to "main" and run `go build`.
 func main() {
-	http.HandleFunc("/response", LocalResponse)
 	http.HandleFunc("/queue", Queue)
 
 	err := http.ListenAndServe(":1234", nil)

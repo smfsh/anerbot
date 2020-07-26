@@ -1,2 +1,4 @@
 anerbot
-setup
+localsetup.sh
+
+*vendor*

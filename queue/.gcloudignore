@@ -14,7 +14,11 @@
 .gitignore
 
 node_modules
-#!include:.gitignore
 
 .idea
-config
+config.sh
+
+go.mod
+go.sum
+
+deploy.sh
