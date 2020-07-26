@@ -118,12 +118,16 @@ func Queue(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("empty text in form")
 	}
 
+	if r.Form["channel_id"][0] != slackChannelID {
+		log.Fatalf("unable to validate Slack channel origin")
+	}
+
 	// Validate the query itself from the form. Check for
 	// an empty query and omit the word "search" if present
 	// to maintain backwards compatibility with Anerbot 1.0.
 	queryText := r.Form["text"][0]
 	if queryText == "" {
-		http.Error(w, "Unable to search for an empty string", 400)
+		log.Fatalf("unable to perform an empty search")
 	}
 	if strings.HasPrefix(queryText, "search") {
 		queryText = strings.TrimPrefix(queryText, "search ")
