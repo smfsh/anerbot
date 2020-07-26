@@ -36,13 +36,6 @@ var (
 	slackChannelID string
 )
 
-var (
-	airtableAPIKey  string
-	airtableBaseID  string
-	airtableTableID string
-	airtableViewID  string
-)
-
 type queueMessage struct {
 	Query       string `json:"query"`
 	ResponseUrl string `json:"response_url"`
@@ -59,11 +52,6 @@ func init() {
 
 	slackSigSecret = os.Getenv("SLACK_SIG_SECRET")
 	slackChannelID = os.Getenv("SLACK_CHANNEL_ID")
-
-	airtableAPIKey = os.Getenv("AIRTABLE_API_KEY")
-	airtableBaseID = os.Getenv("AIRTABLE_BASE_ID")
-	airtableTableID = os.Getenv("AIRTABLE_TABLE_ID")
-	airtableViewID = os.Getenv("AIRTABLE_VIEW_ID")
 }
 
 func main() {

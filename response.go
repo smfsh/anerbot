@@ -7,11 +7,19 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/smfsh/airtable-go"
 
 	"github.com/labstack/gommon/log"
+)
+
+var (
+	airtableAPIKey  string
+	airtableBaseID  string
+	airtableTableID string
+	airtableViewID  string
 )
 
 type feature struct {
@@ -49,40 +57,48 @@ type PubSubMessage struct {
 	Data []byte `json:"data"`
 }
 
-func Response(ctx context.Context, m PubSubMessage) {
+func init() {
+	airtableAPIKey = os.Getenv("AIRTABLE_API_KEY")
+	airtableBaseID = os.Getenv("AIRTABLE_BASE_ID")
+	airtableTableID = os.Getenv("AIRTABLE_TABLE_ID")
+	airtableViewID = os.Getenv("AIRTABLE_VIEW_ID")
+}
+
+func Response(ctx context.Context, m PubSubMessage) error {
 	var message queueMessage
 	err := json.Unmarshal(m.Data, &message)
 	if err != nil {
-		log.Fatalf("could not unmarshal message: %v", err)
+		return fmt.Errorf("could not unmarshal message: %v", err)
 	}
 
 	atr, err := queryAirtable(message.Query)
 	if err != nil {
 		sendFailureMessage(message.ResponseUrl)
-		log.Fatalf("error querying Airtable: %v", err)
+		return fmt.Errorf("error querying Airtable: %v", err)
 	}
 
 	res, err := buildSlackResponse(atr)
 	if err != nil {
-		log.Fatalf("unable to build slack response: %v", err)
+		return fmt.Errorf("unable to build slack response: %v", err)
 	}
 
 	body, err := json.Marshal(res)
 	if err != nil {
-		log.Fatalf("unable to convert slack message to JSON: %v", err)
+		return fmt.Errorf("unable to convert slack message to JSON: %v", err)
 	}
 	req, err := http.NewRequest("POST", message.ResponseUrl, bytes.NewBuffer(body))
 	if err != nil {
-		log.Fatalf("unable to build new HTTP request: %v", err)
+		return fmt.Errorf("unable to build new HTTP request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("unable to send message to Slack: %v", err)
+		return fmt.Errorf("unable to send message to Slack: %v", err)
 	}
 	defer resp.Body.Close()
+	return nil
 }
 
 func sendFailureMessage(url string) {
@@ -167,22 +183,22 @@ func buildSlackResponse(f []feature) (*slackResponse, error) {
 
 		var value string
 		if v.Fields.Roadmap != "" {
-			value += fmt.Sprintf("*Roadmap:* %s\r\n", v.Fields.Roadmap)
+			value += fmt.Sprintf(":sparkles: *Roadmap:* %s\r\n", v.Fields.Roadmap)
 		}
 		if v.Fields.TeamResponsible != "" {
-			value += fmt.Sprintf("*Team responsible:* %s\r\n", v.Fields.TeamResponsible)
+			value += fmt.Sprintf(":one-team: *Team(s):* %s\r\n", v.Fields.TeamResponsible)
 		}
 		if v.Fields.Plan != "" {
-			value += fmt.Sprintf("*Plan:* %s\r\n", v.Fields.Plan)
+			value += fmt.Sprintf(":moneybag: *Plan:* %s\r\n", v.Fields.Plan)
 		}
 		if v.Fields.FeatureFlag != "" {
-			value += fmt.Sprintf("*Feature Flag:* %s\r\n", v.Fields.FeatureFlag)
+			value += fmt.Sprintf(":triangular_flag_on_post: *Feature Flag:* %s\r\n", v.Fields.FeatureFlag)
 		}
 		if v.Fields.Entitlements != "" {
-			value += fmt.Sprintf("*Entitlements:* %s\r\n", v.Fields.Entitlements)
+			value += fmt.Sprintf(":crown: *Entitlements:* %s\r\n", v.Fields.Entitlements)
 		}
 		if v.Fields.Documentation != "" {
-			value += fmt.Sprintf("*Documentation:* %s\r\n", v.Fields.Documentation)
+			value += fmt.Sprintf(":books: *Documentation:* %s\r\n", v.Fields.Documentation)
 		}
 
 		fallback := fmt.Sprintf("%s: %s", v.Fields.Feature, link)
@@ -205,6 +221,9 @@ func buildSlackResponse(f []feature) (*slackResponse, error) {
 
 func queryAirtable(query string) ([]feature, error) {
 	client, err := airtable.New(airtableAPIKey, airtableBaseID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create new airtable client: %v", err)
+	}
 
 	query = strings.ToLower(query)
 
