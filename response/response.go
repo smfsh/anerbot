@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/smfsh/airtable-go"
@@ -38,7 +39,7 @@ type feature struct {
 
 // Struct for the message to be sent to Slack.
 type slackResponse struct {
-	ReplaceOriginal bool         `json:"replace_original"`
+	ReplaceOriginal string       `json:"replace_original"`
 	ResponseType    string       `json:"response_type"`
 	Text            string       `json:"text"`
 	Attachments     []attachment `json:"attachments,omitempty"`
@@ -252,7 +253,7 @@ func buildSlackResponse(f []feature) (*slackResponse, error) {
 
 	// Initialize the response object with some default values.
 	res := &slackResponse{
-		ReplaceOriginal: true,
+		ReplaceOriginal: strconv.FormatBool(true),
 		ResponseType:    "ephemeral",
 		Text:            text,
 		Attachments:     nil,
