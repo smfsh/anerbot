@@ -95,6 +95,9 @@ func Queue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queryText := r.Form["text"][0]
+	if queryText == "" {
+		http.Error(w, "Unable to search for an empty string", 400)
+	}
 	if strings.HasPrefix(queryText, "search") {
 		queryText = strings.TrimPrefix(queryText, "search ")
 	}

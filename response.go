@@ -36,9 +36,10 @@ type feature struct {
 }
 
 type slackResponse struct {
-	ResponseType string       `json:"response_type"`
-	Text         string       `json:"text"`
-	Attachments  []attachment `json:"attachments,omitempty"`
+	ReplaceOriginal bool         `json:"replace_original"`
+	ResponseType    string       `json:"response_type"`
+	Text            string       `json:"text"`
+	Attachments     []attachment `json:"attachments,omitempty"`
 }
 
 type attachment struct {
@@ -171,12 +172,13 @@ func buildSlackResponse(f []feature) (*slackResponse, error) {
 	if len(f) == 0 {
 		text = "No items found, try another search term"
 	} else {
-		text = fmt.Sprintf("Found %d items, what would you like to learn more about?", len(f))
+		text = fmt.Sprintf("Found %d items! Click on any result to learn more.", len(f))
 	}
 	res := &slackResponse{
-		ResponseType: "ephemeral",
-		Text:         text,
-		Attachments:  nil,
+		ReplaceOriginal: true,
+		ResponseType:    "ephemeral",
+		Text:            text,
+		Attachments:     nil,
 	}
 	for _, v := range f {
 		link := fmt.Sprintf("https://airtable.com/%s/%s/%s", airtableTableID, airtableViewID, v.AirtableID)
