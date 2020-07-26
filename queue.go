@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -16,8 +17,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
-
-	"github.com/labstack/gommon/log"
 )
 
 const (

@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/smfsh/airtable-go"
-
-	"github.com/labstack/gommon/log"
 )
 
 var (
