@@ -77,6 +77,13 @@ func main() {
 // to the cloud function is sent directly to Queue() and the rest
 // of the process launches from this point.
 func Queue(w http.ResponseWriter, r *http.Request) {
+	// Immediately reply if query string "ping" is not empty.
+	// This can be used by an external caller to keep the
+	// GCF warm for responses.
+	if r.URL.Query().Get("ping") != "" {
+		return
+	}
+
 	// Grab the raw body in bytes from the original request and
 	// create a readable buffer for other functions to use.
 	bodyBytes, err := ioutil.ReadAll(r.Body)
@@ -89,13 +96,13 @@ func Queue(w http.ResponseWriter, r *http.Request) {
 	// from Slack should not come in any other method.
 	if r.Method != "POST" {
 		http.Error(w, "Only POST requests are accepted", 405)
+		return
 	}
 
 	// Parse the body of the POST request and gather the data
 	// into a new field on the request called Form (accessed
 	// via r.Form)
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Couldn't parse form", 400)
 		log.Fatalf("ParseForm: %v", err)
 	}
 
@@ -110,7 +117,7 @@ func Queue(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("verifyWebhook: %v", err)
 	}
 	if !ok {
-		log.Fatalf("signatures did not match.")
+		log.Fatalf("unable to validate request: signatures did not match")
 	}
 
 	// Validate that the entire form is actually present.
@@ -118,8 +125,26 @@ func Queue(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("empty text in form")
 	}
 
+	// End technical request validation.
+	// Begin user request validation.
+
+	// Create our object that will eventually be converted to
+	// JSON and sent to Slack as a response.
+	res := queueResponse{
+		ResponseType: "ephemeral",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	// Validate that the request came from the restricted Slack channel ID.
 	if r.Form["channel_id"][0] != slackChannelID {
-		log.Fatalf("unable to validate Slack channel origin")
+		res.Text = fmt.Sprintf("Anerbot needs to run in <#%s>, try again there! :broken_heart:", slackChannelID)
+		// Marshal our response struct into JSON and send it back to Slack.
+		err = json.NewEncoder(w).Encode(res)
+		if err != nil {
+			log.Fatalf("json.Marshal: %v", err)
+		}
+		return
 	}
 
 	// Validate the query itself from the form. Check for
@@ -127,7 +152,13 @@ func Queue(w http.ResponseWriter, r *http.Request) {
 	// to maintain backwards compatibility with Anerbot 1.0.
 	queryText := r.Form["text"][0]
 	if queryText == "" {
-		log.Fatalf("unable to perform an empty search")
+		res.Text = fmt.Sprintf("Unable search for an empty string! :this-is-fine:")
+		// Marshal our response struct into JSON and send it back to Slack.
+		err = json.NewEncoder(w).Encode(res)
+		if err != nil {
+			log.Fatalf("json.Marshal: %v", err)
+		}
+		return
 	}
 	if strings.HasPrefix(queryText, "search") {
 		queryText = strings.TrimPrefix(queryText, "search ")
@@ -151,15 +182,9 @@ func Queue(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare the message to be immediately sent back to Slack
 	// in an attempt to beat their three second timeout.
-	responseText := fmt.Sprintf(`Hang tight - gathering results for "%s".`, queryText)
-	res := queueResponse{
-		ResponseType: "ephemeral",
-		Text:         responseText,
-	}
+	res.Text = fmt.Sprintf(`Hang tight - gathering results for "%s".`, queryText)
 
 	// Marshal our response struct into JSON and send it back to Slack.
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
 		log.Fatalf("json.Marshal: %v", err)
