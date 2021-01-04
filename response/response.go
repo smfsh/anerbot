@@ -27,13 +27,13 @@ var (
 type feature struct {
 	AirtableID string `json:"id"`
 	Fields     struct {
-		Feature         string
-		Roadmap         string
-		TeamResponsible string `json:"Team responsible"`
-		Plan            string
-		FeatureFlag     string `json:"Feature flag"`
-		Entitlements    string
-		Documentation   string
+		Feature               string
+		Roadmap               string
+		TeamResponsible       string `json:"Team responsible"`
+		Plan                  string
+		FeatureFlag           string `json:"Feature flag"`
+		Entitlements          string
+		ExternalDocumentation string `json:"External documentation"`
 	}
 }
 
@@ -284,8 +284,8 @@ func buildSlackResponse(f []feature) (*slackResponse, error) {
 		if v.Fields.Entitlements != "" {
 			value += fmt.Sprintf(":crown: *Entitlements:* %s\r\n", v.Fields.Entitlements)
 		}
-		if v.Fields.Documentation != "" {
-			value += fmt.Sprintf(":books: *Documentation:* %s\r\n", v.Fields.Documentation)
+		if v.Fields.ExternalDocumentation != "" {
+			value += fmt.Sprintf(":books: *External Documentation:* %s\r\n", v.Fields.ExternalDocumentation)
 		}
 
 		// Create a fallback title to be used in the case that rich markdown
@@ -332,7 +332,7 @@ func queryAirtable(query string) ([]feature, error) {
 		"Plan",
 		"Feature flag",
 		"Entitlements",
-		"Documentation",
+		"External documentation",
 	}
 
 	// Create an empty slice of strings that will be filled with
